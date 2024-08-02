@@ -36,7 +36,6 @@ import ReOrg from "../layer/ReOrg";
 import IDetect from "../layer/IDetect";
 import axios from 'axios';
 import ReactFlow, {
-
   addEdge,
   MiniMap,
   ReactFlowProvider,
@@ -51,6 +50,8 @@ import InitialArch from "../../InitialArch";
 import arange_icon from "../../img/swap.png";
 import BasicBlockimg from "../../img/basicblock.png";
 import BottleNeckimg from "../../img/bottleneck.png";
+import CustomNode from "../CustomNode";
+
 
 let id = 1;
 const getId = () => `${id}`;
@@ -58,6 +59,10 @@ let nowc= 0;
 const edgeTypes = {
   custom: CustomEdge
 };
+const nodeTypes = {
+  custom: CustomNode
+};
+
 let nowp = "";
 var checkFirst = 0;
 let initRunningStateTime = 100;
@@ -286,10 +291,30 @@ const notRunningState = setInterval(() => {
     clearInterval(notRunningState);
     notRunningState();
   };
+  const onConnectStart = (event, params) => {
+    if (params.handleType === 'target') {
+      const handlePosition = params.handleId.split('-')[1];
+      event.target.dataset.handleId = `source-${handlePosition}`;
+      event.target.dataset.handleType = 'source';
+    }
+  };
 
   const onConnect = async (params) => {
-    setElements((els) => addEdge(params, els));
-      // edge create **********************
+      if (params.source === params.target) {
+        // 동일한 노드로의 연결을 무시
+        return;
+      }
+
+      // 핸들 타입이 target인 경우 source 핸들로 변경
+      if (params.sourceHandle && params.sourceHandle.startsWith('target')) {
+        const handlePosition = params.sourceHandle.split('-')[1];
+        params.sourceHandle = `source-${handlePosition}`;
+      }
+
+      if (params.targetHandle && params.targetHandle.startsWith('source')) {
+        const handlePosition = params.targetHandle.split('-')[1];
+        params.targetHandle = `target-${handlePosition}`;
+      }
 
       const get_edge = async () => {
         try {
@@ -298,20 +323,36 @@ const notRunningState = setInterval(() => {
           console.error(error);
         }
       };
+
       const cedge = await get_edge();
       var maxId = 0;
-      for(var i=0; i<cedge.data.length; i++){
-       if(maxId<cedge.data[i].id){
-        maxId = cedge.data[i].id
-       }
+      for (var i = 0; i < cedge.data.length; i++) {
+        if (maxId < cedge.data[i].id) {
+          maxId = cedge.data[i].id;
+        }
       }
-      axios.post("/api/edge/",{
-        id: maxId+1,
-        prior: params.source,
-        next: params.target
-      }).then(function(response){
-        console.log(response)
-      }).catch(err=>console.log(err));
+
+      // 새로운 엣지 객체를 직접 생성
+      const newEdge = {
+        id: maxId + 1,
+        source: params.source,
+        sourceHandle: params.sourceHandle,
+        target: params.target,
+        targetHandle: params.targetHandle,
+        type: 'custom', // 커스텀 엣지 타입 설정
+      };
+    console.log(params, newEdge);
+      // 엣지를 elements 상태에 추가
+    setElements((els) => [...els, newEdge]);
+
+    // 엣지 정보를 백엔드에 저장
+    axios.post("/api/edge/", {
+      id: maxId + 1,
+      prior: params.source,
+      next: params.target
+    }).then(function (response) {
+      console.log(response);
+    }).catch(err => console.log(err));
   };
 
   const onDeleteEdge = (e) => {
@@ -409,8 +450,6 @@ const notRunningState = setInterval(() => {
         console.log(clickedNodeList);
         console.log(clickedNodeIdList);
       }
-
-
   };
 
   const onDrop = async (event) => {
@@ -462,12 +501,12 @@ const notRunningState = setInterval(() => {
 
     const newNode = {
       id: getId(),
-      type: "default",
+      type: "custom",
       position,
       sort: "0",
       style: {
         background: `${color}`,
-        width: 135,
+
         fontSize: "20px",
         fontFamily: "Helvetica",
         // boxShadow: "5px 5px 5px 0px rgba(0,0,0,.10)",
@@ -490,7 +529,6 @@ const notRunningState = setInterval(() => {
       style: {
         background: `${color}`,
         fontSize: "20px",
-        width: "135px",
         height: "280px",
         boxShadow: "7px 7px 7px 0px rgba(0,0,0,.20)",
         border: "0px",
@@ -515,7 +553,6 @@ const notRunningState = setInterval(() => {
       style: {
         background: `${color}`,
         fontSize: "20px",
-        width: "135px",
         height: "280px",
         boxShadow: "7px 7px 7px 0px rgba(0,0,0,.20)",
         border: "0px",
@@ -541,380 +578,53 @@ const notRunningState = setInterval(() => {
     }
   };
 
-  const   C = () => {
-    if (state === "Conv2d")
-      return (
-        <EditModal
-          params={paramState}
-          layer={idState}
-          open={modalOpen}
-          save={saveModal}
-          close={closeModal}
-          header={state}
-          setState={setIdState}
-        ></EditModal>
-      );
-    if (state === "Conv")
-      return (
-        <Conv
-          params={paramState}
-          layer={idState}
-          open={modalOpen}
-          save={saveModal}
-          close={closeModal}
-          header={state}
-          setState={setIdState}
-        ></Conv>
-      );
-    if (state === "MaxPool2d")
-      return (
-        <MaxPoolModal
-          params = {paramState}
-          layer={idState}
-          open={modalOpen}
-          save={saveModal}
-          close={closeModal}
-          header={state}
-          setState={setIdState}
-        ></MaxPoolModal>
-      );
-    if (state === "AvgPool2d")
-      return (
-        <AvgPool2d
-          params = {paramState}
-          layer={idState}
-          open={modalOpen}
-          save={saveModal}
-          close={closeModal}
-          header={state}
-          setState={setIdState}
-        ></AvgPool2d>
-      );
-    if (state === "AdaptiveAvgPool2d")
-      return (
-        <AdaptiveAvgPool2d
-          params = {paramState}
-          layer={idState}
-          open={modalOpen}
-          save={saveModal}
-          close={closeModal}
-          header={state}
-          setState={setIdState}
-        ></AdaptiveAvgPool2d>
-      );
-    if (state === "MP")
-      return (
-        <MP
-          params = {paramState}
-          layer={idState}
-          open={modalOpen}
-          save={saveModal}
-          close={closeModal}
-          header={state}
-          setState={setIdState}
-        ></MP>
-      );
-    if (state === "SP")
-      return (
-        <SP
-          params = {paramState}
-          layer={idState}
-          open={modalOpen}
-          save={saveModal}
-          close={closeModal}
-          header={state}
-          setState={setIdState}
-        ></SP>
-      );
-     if (state === "Softmax")
-      return (
-        <Softmax
-          params = {paramState}
-          layer={idState}
-          open={modalOpen}
-          save={saveModal}
-          close={closeModal}
-          header={state}
-          setState={setIdState}
-        ></Softmax>
-      );
-    if (state === "ConstantPad2d")
-      return (
-        <ConstantPad2d
-          params = {paramState}
-          layer={idState}
-          open={modalOpen}
-          save={saveModal}
-          close={closeModal}
-          header={state}
-          setState={setIdState}
-        ></ConstantPad2d>
-        );
-    if (state === "BatchNorm2d")
-      return (
-        <BatchNorm2d
-          params = {paramState}
-          layer={idState}
-          open={modalOpen}
-          save={saveModal}
-          close={closeModal}
-          header={state}
-          setState={setIdState}
-        ></BatchNorm2d>
-      );
+  const C = () => {
+    const components = {
+      Conv2d: EditModal,
+      Conv: Conv,
+      MaxPool2d: MaxPoolModal,
+      AvgPool2d: AvgPool2d,
+      AdaptiveAvgPool2d: AdaptiveAvgPool2d,
+      MP: MP,
+      SP: SP,
+      Softmax: Softmax,
+      ConstantPad2d: ConstantPad2d,
+      BatchNorm2d: BatchNorm2d,
+      MSELoss: MSELoss,
+      Tanh: Tanh,
+      Sigmoid: Sigmoid,
+      CrossEntropyLoss: CrossEntropyLoss,
+      Linear: Linear,
+      Dropout: Dropout,
+      ZeroPad2d: ZeroPad2d,
+      BCELoss: BCELoss,
+      LeakyReLU: LeakyReLU,
+      ReLU: ReLU,
+      ReLU6: ReLU6,
+      Flatten: Flatten,
+      ReOrg: ReOrg,
+      BasicBlock: BasicBlock,
+      Bottleneck: Bottleneck,
+      Concat: Concat,
+      Shortcut: Shortcut,
+      DownC: DownC,
+      SPPCSPC: SPPCSPC,
+      IDetect: IDetect,
+      Upsample: Upsample
+    };
 
-    if (state === "MSELoss")
-      return (
-        <MSELoss
-          params = {paramState}
-          layer={idState}
-          open={modalOpen}
-          save={saveModal}
-          close={closeModal}
-          header={state}
-          setState={setIdState}
-        ></MSELoss>
-      );
-    if (state === "Tanh")
-      return (
-        <Tanh
-          params = {paramState}
-          layer={idState}
-          open={modalOpen}
-          save={saveModal}
-          close={closeModal}
-          header={state}
-          setState={setIdState}
-        ></Tanh>
-      );
-    if (state === "Sigmoid")
-      return (
-        <Sigmoid
-          params = {paramState}
-          layer={idState}
-          open={modalOpen}
-          save={saveModal}
-          close={closeModal}
-          header={state}
-          setState={setIdState}
-        ></Sigmoid>
-      );
-    if (state === "CrossEntropyLoss")
-      return (
-        <CrossEntropyLoss
-          params = {paramState}
-          layer={idState}
-          open={modalOpen}
-          save={saveModal}
-          close={closeModal}
-          header={state}
-          setState={setIdState}
-        ></CrossEntropyLoss>
-      );
-    if (state === "Linear")
-      return (
-        <Linear
-          params = {paramState}
-          layer={idState}
-          open={modalOpen}
-          save={saveModal}
-          close={closeModal}
-          header={state}
-          setState={setIdState}
-        ></Linear>
-      );
-    if (state === "Dropout")
-      return (
-        <Dropout
-          params = {paramState}
-          layer={idState}
-          open={modalOpen}
-          save={saveModal}
-          close={closeModal}
-          header={state}
-          setState={setIdState}
-        ></Dropout>
-      );
-      if (state === "ZeroPad2d")
-      return (
-        <ZeroPad2d
-          params = {paramState}
-          layer={idState}
-          open={modalOpen}
-          save={saveModal}
-          close={closeModal}
-          header={state}
-          setState={setIdState}
-        ></ZeroPad2d>
-      );
-      if (state === "BCELoss")
-      return (
-        <BCELoss
-          params = {paramState}
-          layer={idState}
-          open={modalOpen}
-          save={saveModal}
-          close={closeModal}
-          header={state}
-          setState={setIdState}
-        ></BCELoss>
-      );
-      if (state === "LeakyReLU")
-      return (
-        <LeakyReLU
-          params = {paramState}
-          layer={idState}
-          open={modalOpen}
-          save={saveModal}
-          close={closeModal}
-          header={state}
-          setState={setIdState}
-        ></LeakyReLU>
-      );
-       if (state === "ReLU")
-      return (
-        <ReLU
-          params = {paramState}
-          layer={idState}
-          open={modalOpen}
-          save={saveModal}
-          close={closeModal}
-          header={state}
-          setState={setIdState}
-        ></ReLU>
-      );
-      if (state === "ReLU6")
-      return (
-        <ReLU6
-          params = {paramState}
-          layer={idState}
-          open={modalOpen}
-          save={saveModal}
-          close={closeModal}
-          header={state}
-          setState={setIdState}
-        ></ReLU6>
-      );
-       if (state === "Flatten")
-      return (
-        <Flatten
-          params = {paramState}
-          layer={idState}
-          open={modalOpen}
-          save={saveModal}
-          close={closeModal}
-          header={state}
-          setState={setIdState}
-        ></Flatten>
-      );
-       if (state === "ReOrg")
-      return (
-        <ReOrg
-          params = {paramState}
-          layer={idState}
-          open={modalOpen}
-          save={saveModal}
-          close={closeModal}
-          header={state}
-          setState={setIdState}
-        ></ReOrg>
-      );
-       if (state === "BasicBlock")
-      return (
-        <BasicBlock
-          params = {paramState}
-          layer={idState}
-          open={modalOpen}
-          save={saveModal}
-          close={closeModal}
-          header={state}
-          setState={setIdState}
-        ></BasicBlock>
-      );
-       if (state === "Bottleneck")
-      return (
-        <Bottleneck
-          params = {paramState}
-          layer={idState}
-          open={modalOpen}
-          save={saveModal}
-          close={closeModal}
-          header={state}
-          setState={setIdState}
-        ></Bottleneck>
-      );
-    if (state === "Concat")
-      return (
-        <Concat
-          params={paramState}
-          layer={idState}
-          open={modalOpen}
-          save={saveModal}
-          close={closeModal}
-          header={state}
-          setState={setIdState}
-        ></Concat>
-      );
-    if (state === "Shortcut")
-      return (
-        <Shortcut
-          params={paramState}
-          layer={idState}
-          open={modalOpen}
-          save={saveModal}
-          close={closeModal}
-          header={state}
-          setState={setIdState}
-        ></Shortcut>
-      );
-    if (state === "DownC")
-      return (
-        <DownC
-          params={paramState}
-          layer={idState}
-          open={modalOpen}
-          save={saveModal}
-          close={closeModal}
-          header={state}
-          setState={setIdState}
-        ></DownC>
-      );
-    if (state === "SPPCSPC")
-      return (
-        <SPPCSPC
-          params={paramState}
-          layer={idState}
-          open={modalOpen}
-          save={saveModal}
-          close={closeModal}
-          header={state}
-          setState={setIdState}
-        ></SPPCSPC>
-      );
-    if (state === "IDetect")
-      return (
-        <IDetect
-          params={paramState}
-          layer={idState}
-          open={modalOpen}
-          save={saveModal}
-          close={closeModal}
-          header={state}
-          setState={setIdState}
-        ></IDetect>
-      );
-    else
-      return (
-        <Upsample
-          params = {paramState}
-          layer={idState}
-          open={modalOpen}
-          save={saveModal}
-          close={closeModal}
-          header={state}
-          setState={setIdState}
-        ></Upsample>
-      );
+    const Component = components[state] || null;
+    return Component ? (
+      <Component
+        params={paramState}
+        layer={idState}
+        open={modalOpen}
+        save={saveModal}
+        close={closeModal}
+        header={state}
+        setState={setIdState}
+      />
+    ) : null;
   };
 
   const [tabToggle, setTabtoggle] = useState(1)
@@ -949,24 +659,24 @@ const tabOnClick = (path) => {
     <div className="dndflow" >
       <ReactFlowProvider>
         <div className="reactflow-wrapper" ref={reactFlowWrapper}>
-          <ReactFlow
-//            onClick={onRunningStateClick}
-            //initElement={initialArch}
+           <ReactFlow
+            onConnectStart={onConnectStart}
             onConnect={onConnect}
             elements={elements}
-            onLoad={onLoad}
+            onLoad={setReactFlowInstance}
             onDrop={onDrop}
             onDragOver={onDragOver}
             snapToGrid={true}
             edgeTypes={edgeTypes}
+            nodeTypes={nodeTypes}
             key="edges"
             onNodeDoubleClick={openModal}
             onEdgeDoubleClick={onDeleteEdge}
             onElementsRemove={onElementsRemove}
             onElementClick={onNodeClick}
             onPaneClick={onPaneClick}
-
-          >
+            connectionMode="loose"
+            >
             <Controls showZoom="" showInteractive="" showFitView="">
               {/*정렬된 노드 get 요청*/}
               <ControlButton onClick={sortActive} title="action">

@@ -1,145 +1,333 @@
-import React, {
-    useEffect,
-    useState
-} from "react";
+import React, { useEffect, useState } from "react";
 import axios from 'axios';
 import NodeColorProp from "./NodeColor";
 import BottleNeckimg from "./img/bottleneck.png";
 import BasicBlockimg from "./img/basicblock.png";
-import Layer from "./components/page/Layer"
-
+import VGG16Data from './VGG16.json';
+import YoloV9Data from './Yolov9.json';
 
 function InitialArch(level, group, setGroup, ungroup, setUngroup, isSort, setIsSort) {
     const [data, setData] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [checkFirst, setCheckFirst] = useState(0);
-
+    const [selectedModel, setSelectedModel] = useState('YOLO');
+    const nodeOrderToIdMap = {};
+    const getModelData = () => {
+        return selectedModel === 'VGG' ? VGG16Data : YoloV9Data;
+    };
 
     useEffect(() => {
         setIsLoading(true);
-        console.log("InitialArch useEffect");
-        console.log("group", group);
-        console.log("ungroup", ungroup);
-        console.log("isSort", isSort);
+
         const init = async () => {
+            async function deleteNodes() {
+                try {
+                    const response = await axios.get("/api/node/");
+                    const existingNodes = response.data;
+                    console.log("data", existingNodes);
+                    for (let node of existingNodes) {
+                        await axios.delete(`/api/node/${node.order}/`);
+                    }
+                } catch (err) {
+                    console.log("노드 삭제 중 오류:", err.response ? err.response.data : err.message);
+                }
+            }
+
+            async function postNodes() {
+                const modelData = getModelData()
+                for (let node of modelData.node) {
+                    try {
+                        await axios.post("/api/node/", {
+                            order: node.order,
+                            layer: node.layer,
+                            parameters: node.parameters
+                        });
+                    } catch (err) {
+                        console.log("오류:", err.response ? err.response.data : err.message);
+                    }
+                }
+            }
+
+            async function deleteEdges() {
+                try {
+                    const response = await axios.get("/api/edge/");
+                    const existingEdges = response.data;
+                    for (let edge of existingEdges) {
+                        await axios.delete(`/api/edge/${edge.id}/`);
+                    }
+                } catch (err) {
+                    console.log("엣지 삭제 중 오류:", err.response ? err.response.data : err.message);
+                }
+            }
+
+            async function postEdges() {
+                const modelData = getModelData()
+                for (let edge of modelData.edge) {
+                    try {
+                        await axios.post("/api/edge/", {
+                            id: edge.id,
+                            prior: edge.prior,
+                            next: edge.next
+                        });
+                    } catch (err) {
+                        console.log("오류:", err.response ? err.response.data : err.message);
+                    }
+                }
+            }
+
+            async function syncData() {
+                await deleteNodes();
+                await postNodes();
+                await deleteEdges();
+                await postEdges();
+            }
+
             function renderData(resData) {
-                console.log("InitalArch.renderData(resData) Enter.")
-                // node_id 와 edge_id로 json 파일을 읽어 순서대로 새로운 id 를 부여함
-                var node_id = 1;
-                var edge_id = 1;
+                var initElements = [];
+                var GNodeIdList = [];
+
+                // 노드를 order 기준으로 정렬
+                const sortedNodes = resData.nodes.sort((a, b) => a.order - b.order);
+
+                var node_id = 0;
                 var x_pos = 100;
                 var y_pos = 100;
                 var isBlock = undefined;
-                //그 배열을 화면에 보여줌
-                var initElements = [];
-                var GNodeIdList = [];
-                // json 파일에서 파일 output의 길이만큼 읽어옴
-                for (var i = 0; i < resData.data.output.length; i++) {
-                    let nodeLabel = resData.data.output[i].layer;
-                    let nodeId = resData.data.output[i].nodeId;
-                    let parameters = resData.data.output[i].parameters;
+
+                sortedNodes.forEach((node) => {
+                    nodeOrderToIdMap[node.order] = node_id;
+
                     let nodeColor;
-                    if (nodeLabel === "Conv2d") {
-                        nodeColor = NodeColorProp.Conv;
-                    } else if (nodeLabel === "Conv") {
-                        nodeColor = NodeColorProp.Conv
-                    } else if (nodeLabel === "MaxPool2d") {
-                        nodeColor = NodeColorProp.Pooling;
-                    } else if (nodeLabel === "AvgPool2d") {
-                        nodeColor = NodeColorProp.Pooling;
-                    } else if (nodeLabel === "AdaptiveAvgPool2d") {
-                        nodeColor = NodeColorProp.Pooling;
-                    } else if (nodeLabel === "MP") {
-                        nodeColor = NodeColorProp.Pooling;
-                    } else if (nodeLabel === "SP") {
-                        nodeColor = NodeColorProp.Pooling;
-                    } else if (nodeLabel === "ZeroPad2d") {
-                        nodeColor = NodeColorProp.Padding;
-                    } else if (nodeLabel === "ConstantPad2d") {
-                        nodeColor = NodeColorProp.Padding;
-                    } else if (nodeLabel === "ReLU") {
-                        nodeColor = NodeColorProp.Activation;
-                    } else if (nodeLabel === "ReLU6") {
-                        nodeColor = NodeColorProp.Activation;
-                    } else if (nodeLabel === "Sigmoid") {
-                        nodeColor = NodeColorProp.Activation;
-                    } else if (nodeLabel === "LeakyReLU") {
-                        nodeColor = NodeColorProp.Activation;
-                    } else if (nodeLabel === "Tanh") {
-                        nodeColor = NodeColorProp.Activation;
-                    } else if (nodeLabel === "Softmax") {
-                        nodeColor = NodeColorProp.Activation;
-                    } else if (nodeLabel === "BatchNorm2d") {
-                        nodeColor = NodeColorProp.Normalization;
-                    } else if (nodeLabel === "Linear") {
-                        nodeColor = NodeColorProp.Linear;
-                    } else if (nodeLabel === "Dropout") {
-                        nodeColor = NodeColorProp.Dropout;
-                    } else if (nodeLabel === "BCELoss") {
-                        nodeColor = NodeColorProp.Loss;
-                    } else if (nodeLabel === "CrossEntropyLoss") {
-                        nodeColor = NodeColorProp.Loss;
-                    } else if (nodeLabel === "Flatten") {
-                        nodeColor = NodeColorProp.Utilities;
-                    } else if (nodeLabel === "Upsample") {
-                        nodeColor = NodeColorProp.Vision;
-                    } else if (nodeLabel === "MSELoss") {
-                        nodeColor = NodeColorProp.Loss;
-                    } else if (nodeLabel === "BasicBlock") {
-                        nodeColor = NodeColorProp.Residual;
-                    } else if (nodeLabel === "Bottleneck") {
-                        nodeColor = NodeColorProp.Residual;
-                    } else if (nodeLabel === "Concat") {
-                        nodeColor = NodeColorProp.Concat;
-                    } else if (nodeLabel === "Shortcut") {
-                        nodeColor = NodeColorProp.Sum;
-                    } else if (nodeLabel === "DownC") {
-                        nodeColor = NodeColorProp.SPP;
-                    } else if (nodeLabel === "SPPCSPC") {
-                        nodeColor = NodeColorProp.SPP;
-                    } else if (nodeLabel === "ReOrg") {
-                        nodeColor = NodeColorProp.Utilities
-                    } else if (nodeLabel === "IDetect") {
-                        nodeColor = NodeColorProp.Head
+                    if (selectedModel === 'VGG') {
+                        switch (node.layer) {
+                            case "Conv2d":
+                            case "Conv":
+                                nodeColor = NodeColorProp.Conv;
+                                break;
+                            case "MaxPool2d":
+                            case "AvgPool2d":
+                            case "AdaptiveAvgPool2d":
+                                nodeColor = NodeColorProp.Pooling;
+                                break;
+                            case "ZeroPad2d":
+                            case "ConstantPad2d":
+                                nodeColor = NodeColorProp.Padding;
+                                break;
+                            case "ReLU":
+                            case "ReLU6":
+                            case "Sigmoid":
+                            case "LeakyReLU":
+                            case "Tanh":
+                            case "Softmax":
+                                nodeColor = NodeColorProp.Activation;
+                                break;
+                            case "BatchNorm2d":
+                                nodeColor = NodeColorProp.Normalization;
+                                break;
+                            case "Linear":
+                                nodeColor = NodeColorProp.Linear;
+                                break;
+                            case "Dropout":
+                                nodeColor = NodeColorProp.Dropout;
+                                break;
+                            case "BCELoss":
+                            case "CrossEntropyLoss":
+                            case "MSELoss":
+                                nodeColor = NodeColorProp.Loss;
+                                break;
+                            case "Flatten":
+                            case "ReOrg":
+                                nodeColor = NodeColorProp.Utilities;
+                                break;
+                            case "Upsample":
+                                nodeColor = NodeColorProp.Vision;
+                                break;
+                            case "BasicBlock":
+                            case "Bottleneck":
+                                nodeColor = NodeColorProp.Residual;
+                                break;
+                            case "Concat":
+                                nodeColor = NodeColorProp.Concat;
+                                break;
+                            case "Shortcut":
+                                nodeColor = NodeColorProp.Sum;
+                                break;
+                            case "DownC":
+                            case "SPPCSPC":
+                                nodeColor = NodeColorProp.SPP;
+                                break;
+                            case "IDetect":
+                                nodeColor = NodeColorProp.Head;
+                                break;
+                            default:
+                                nodeColor = NodeColorProp.Default;
+                        }
+                    } else if (selectedModel === 'YOLO') {
+                        switch (node.layer) {
+                            case "Conv":
+                                nodeColor = NodeColorProp.Yolo_Conv;
+                                break;
+                            case "RepNCSPELAN4":
+                                nodeColor = NodeColorProp.Yolo_RepNCSPELAN4;
+                                break;
+                            case "ADown":
+                                nodeColor = NodeColorProp.Yolo_ADown;
+                                break;
+                            case "Concat":
+                                nodeColor = NodeColorProp.Yolo_Concat;
+                                break;
+                            case "Upsample":
+                                nodeColor = NodeColorProp.Yolo_Upsample;
+                                break;
+                            case "SPPELAN":
+                                nodeColor = NodeColorProp.Yolo_SPPELAN;
+                                break;
+                            case "Detect":
+                                nodeColor = NodeColorProp.Yolo_Detect;
+                                break;
+                            default:
+                                nodeColor = NodeColorProp.Default;
+                        }
                     }
 
-                    if (i === 0) {
-                        x_pos = 100;
-                        y_pos = 100;
-                    } else if (isBlock) {
-                        if (y_pos + 330 <= 639) {
-                            y_pos += 330;
+                    if (selectedModel === 'VGG') {
+                        // 노드 위치 설정
+                        if (node_id === 0) {
+                            x_pos = 100;
+                            y_pos = 100;
+                        } else if (isBlock) {
+                            if (y_pos + 330 <= 639) {
+                                y_pos += 330;
+                            } else {
+                                x_pos += 200;
+                                y_pos = 100;
+                            }
+                        } else if (y_pos < 589) {
+                            y_pos += 70;
                         } else {
                             x_pos += 200;
                             y_pos = 100;
                         }
-                    } else if (y_pos < 589) {
-                        y_pos += 70;
-                    } else {
-                        x_pos += 200;
-                        y_pos = 100;
+                    } else if (selectedModel === 'YOLO') {
+                        switch (node_id) {
+                            case 0:
+                                x_pos = 100;
+                                y_pos = 0;
+                                break;
+                            case 1:
+                                x_pos = 100;
+                                y_pos = 100;
+                                break;
+                            case 2:
+                                x_pos = 100;
+                                y_pos = 200;
+                                break;
+                            case 3:
+                                x_pos = 100;
+                                y_pos = 300;
+                                break;
+                            case 4:
+                                x_pos = 100;
+                                y_pos = 400;
+                                break;
+                            case 5:
+                                x_pos = 100;
+                                y_pos = 600;
+                                break;
+                            case 6:
+                                x_pos = 100;
+                                y_pos = 700;
+                                break;
+                            case 7:
+                                x_pos = 100;
+                                y_pos = 800;
+                                break;
+                            case 8:
+                                x_pos = 100;
+                                y_pos = 900;
+                                break;
+
+                            case 9:
+                                x_pos = 400;
+                                y_pos = 900;
+                                break;
+                            case 10:
+                                x_pos = 400;
+                                y_pos = 800;
+                                break;
+                            case 11:
+                                x_pos = 400;
+                                y_pos = 700;
+                                break;
+                            case 12:
+                                x_pos = 400;
+                                y_pos = 600;
+                                break;
+                            case 13:
+                                x_pos = 400;
+                                y_pos = 500;
+                                break;
+                            case 14:
+                                x_pos = 400;
+                                y_pos = 400;
+                                break;
+                            case 15:
+                                x_pos = 400;
+                                y_pos = 300;
+                                break;
+
+                            case 16:
+                                x_pos = 700;
+                                y_pos = 500;
+                                break;
+                            case 17:
+                                x_pos = 700;
+                                y_pos = 600;
+                                break;
+                            case 18:
+                                x_pos = 700;
+                                y_pos = 700;
+                                break;
+                            case 19:
+                                x_pos = 700;
+                                y_pos = 800;
+                                break;
+                            case 20:
+                                x_pos = 700;
+                                y_pos = 900;
+                                break;
+                            case 21:
+                                x_pos = 700;
+                                y_pos = 1000;
+                                break;
+
+                            case 22:
+                                x_pos = 1000;
+                                y_pos = 300;
+                                break;
+                            case 23:
+                                x_pos = 1000;
+                                y_pos = 700;
+                                break;
+                            case 24:
+                                x_pos = 1000;
+                                y_pos = 1000;
+                                break;
+                            default:
+                                break;
+                        }
                     }
 
-                    if (
-                        String(nodeLabel) === "BasicBlock" ||
-                        String(nodeLabel) === "Bottleneck"
-                    ) {
-                        isBlock = true;
-                    } else {
-                        isBlock = false;
-                    }
+                    isBlock = (node.layer === "BasicBlock" || node.layer === "Bottleneck");
 
                     const newNode = {
                         id: String(node_id),
-                        type: "default",
-                        position: {
-                            x: x_pos,
-                            y: y_pos
-                        },
+                        type: "custom",
+                        position: { x: x_pos, y: y_pos },
+                        targetPosition: "left",
                         sort: "0",
                         style: {
-                            background: `${nodeColor}`,
-                            width: 135,
+                            background: nodeColor,
                             color: "black",
                             fontSize: "20px",
                             fontFamily: "Helvetica",
@@ -148,394 +336,85 @@ function InitialArch(level, group, setGroup, ungroup, setUngroup, isSort, setIsS
                             border: "none",
                         },
                         data: {
-                            // index: `${nodeOrder}`,
-                            label: `${nodeLabel}`,
-                            // subparam: `${nodeParam}`,
+                            label: node.layer,
                         },
                     };
 
-                    const newResidualNode1 = {
-                        // 노드 내부에 residual block 이미지 넣기 - bottleneck
-                        id: String(node_id),
-                        type: "default",
-                        position: {
-                            x: x_pos,
-                            y: y_pos
-                        },
-                        sort: "2",
-                        style: {
-                            background: `${nodeColor}`,
-                            fontSize: "20px",
-                            width: "135px",
-                            height: "280px",
-                            boxShadow: "7px 7px 7px 0px rgba(0,0,0,.20)",
-                            border: "0px",
-                            borderRadius: "10px",
-                            backgroundImage: `url(${BottleNeckimg})`, //사진 나오게
-                            backgroundPosition: "center",
-                            backgroundSize: "135px 280px",
-                            backgroundRepeat: "no-repeat",
-                            color: "rgba(0, 0, 0, 0)",
-                        },
-                        data: {
-                            label: `${nodeLabel}`,
-                            // subparam: `${nodeParam}`,
-                        },
-                    };
-
-                    const newResidualNode2 = {
-                        // 노드 내부에 residual block 이미지 넣기 - basic block
-                        id: String(node_id),
-                        type: "default",
-                        position: {
-                            x: x_pos,
-                            y: y_pos
-                        },
-                        sort: "1",
-                        style: {
-                            background: `${nodeColor}`,
-                            fontSize: "20px",
-                            width: "135px",
-                            height: "280px",
-                            boxShadow: "7px 7px 7px 0px rgba(0,0,0,.20)",
-                            border: "0px",
-                            borderRadius: "10px",
-                            backgroundImage: `url(${BasicBlockimg})`, //사진 나오게
-                            backgroundPosition: "center",
-                            backgroundSize: "135px 280px",
-                            backgroundRepeat: "no-repeat",
-                            color: "rgba(0, 0, 0, 0)",
-                        },
-                        data: {
-                            label: `${nodeLabel}`,
-                            // subparam: `${nodeParam}`,
-                        },
-                    };
-
+                    // BasicBlock 및 Bottleneck에 대한 스타일 추가
+                    if (node.layer === "Bottleneck") {
+                        newNode.style.backgroundImage = `url(${BottleNeckimg})`;
+                        newNode.style.height = "280px";
+                        newNode.style.backgroundPosition = "center";
+                        newNode.style.backgroundSize = "135px 280px";
+                        newNode.style.backgroundRepeat = "no-repeat";
+                        newNode.style.color = "rgba(0, 0, 0, 0)";
+                    } else if (node.layer === "BasicBlock") {
+                        newNode.style.backgroundImage = `url(${BasicBlockimg})`;
+                        newNode.style.height = "280px";
+                        newNode.style.backgroundPosition = "center";
+                        newNode.style.backgroundSize = "135px 280px";
+                        newNode.style.backgroundRepeat = "no-repeat";
+                        newNode.style.color = "rgba(0, 0, 0, 0)";
+                    }
 
                     GNodeIdList.push(node_id);
-                    if (String(nodeLabel) === "Bottleneck") {
-                        initElements.push(newResidualNode1);
-                        node_id++;
-                    } else if (String(nodeLabel) === "BasicBlock") {
-                        initElements.push(newResidualNode2);
-                        node_id++;
+                    initElements.push(newNode);
+                    node_id++;
+                });
+
+                // 엣지 데이터 처리
+                resData.edges.forEach(edge => {
+                    const priorNodeId = nodeOrderToIdMap[edge.prior];
+                    const nextNodeId = nodeOrderToIdMap[edge.next];
+
+                    if (priorNodeId && nextNodeId) {
+                        const newEdge = {
+                            id: String(edge.id),
+                            source: String(priorNodeId),
+                            target: String(nextNodeId),
+                            type: 'custom',
+                        };
+                        initElements.push(newEdge);
                     } else {
-                        initElements.push(newNode);
-                        node_id++;
+                        console.error(`엣지 ${edge.id}가 존재하지 않는 노드를 참조합니다: ${edge.prior}, ${edge.next}`);
                     }
-                }
-                //    edge 설정
-                console.log(GNodeIdList);
-                for (var j = 0; j < resData.data.output.length; j++) {
-                    const newEdge = {
-                        id: String(edge_id),
-                        // id: "reactflow__edge-"+ `${edgePrior}` + "null" + `${edgeNext}` + "null",
-                        source: String(GNodeIdList[j]),
-                        sourceHandle: null,
-                        target: String(GNodeIdList[j + 1]),
-                        targetHandle: null,
-                    };
-                    initElements.push(newEdge);
-                    edge_id++;
-                }
-                //
-                console.log("initElements", initElements);
+                });
+
                 setData([...initElements]);
                 setIsLoading(false);
-
             }
+
             if (checkFirst === 0) {
-                console.log("맨 처음 실행코드-");
-//                for (var j = 0; j < 160; j++) {
-//                    axios.delete('/api/node/'.concat(j).concat('/'))
-//                        .then(function(response) {})
-//                        .catch(function(error) {})
-//                        .then(function() {});
-//                }
-//                for (var j = 0; j < 150; j++) {
-//                    axios.delete('/api/edge/'.concat(j).concat('/'))
-//                        .then(function(response) {})
-//                        .catch(function(error) {})
-//                        .then(function() {});
-//                }
-                //            const response10 = await axios.post("/start", {
-                //                msg: 'started',
-                //                user_id: 123,
-                //                project_id: 123
-                //            }).then(async function(response) {
-                const get_node = async () => {
-                          try {
-                            return await axios.get("/api/node/");
-                          } catch (error) {
-                            console.error(error);
-                          }
-                  };
-
-                const get_edge = async () => {
-                          try {
-                            return await axios.get("/api/edge/");
-                          } catch (error) {
-                            console.error(error);
-                          }
-                };
-                // console.log("sadstjklsdfhludz")
-                const cnode = await get_node();
-                const dedge = await get_edge();
-                var node_id = 1;
-                var edge_id = 1;
-                var x_pos = 100;
-                var y_pos = 100;
-                var isBlock = undefined;
-                var initElements = [];
-
-                for (var i = 0; i < cnode.data.length; i++) {
-                    let nodeOrder = cnode.data[i].order;
-                    let nodeLabel = cnode.data[i].layer;
-                    let nodeParam = cnode.data[i].parameters;
-                    let nodeColor;
-                    if (nodeLabel === "Conv2d") {
-                        nodeColor = NodeColorProp.Conv;
-                    } else if (nodeLabel === "Conv") {
-                        nodeColor = NodeColorProp.Conv
-                    } else if (nodeLabel === "MaxPool2d") {
-                        nodeColor = NodeColorProp.Pooling;
-                    } else if (nodeLabel === "AvgPool2d") {
-                        nodeColor = NodeColorProp.Pooling;
-                    } else if (nodeLabel === "AdaptiveAvgPool2d") {
-                        nodeColor = NodeColorProp.Pooling;
-                    } else if (nodeLabel == "MP") {
-                        nodeColor = NodeColorProp.Pooling;
-                    } else if (nodeLabel == "SP") {
-                        nodeColor = NodeColorProp.Pooling;
-                    } else if (nodeLabel === "ZeroPad2d") {
-                        nodeColor = NodeColorProp.Padding;
-                    } else if (nodeLabel === "ConstantPad2d") {
-                        nodeColor = NodeColorProp.Padding;
-                    } else if (nodeLabel === "ReLU") {
-                        nodeColor = NodeColorProp.Activation;
-                    } else if (nodeLabel === "ReLU6") {
-                        nodeColor = NodeColorProp.Activation;
-                    } else if (nodeLabel === "Sigmoid") {
-                        nodeColor = NodeColorProp.Activation;
-                    } else if (nodeLabel === "LeakyReLU") {
-                        nodeColor = NodeColorProp.Activation;
-                    } else if (nodeLabel === "Tanh") {
-                        nodeColor = NodeColorProp.Activation;
-                    } else if (nodeLabel === "Softmax") {
-                        nodeColor = NodeColorProp.Activation;
-                    } else if (nodeLabel === "BatchNorm2d") {
-                        nodeColor = NodeColorProp.Normalization;
-                    } else if (nodeLabel === "Linear") {
-                        nodeColor = NodeColorProp.Linear;
-                    } else if (nodeLabel === "Dropout") {
-                        nodeColor = NodeColorProp.Dropout;
-                    } else if (nodeLabel === "BCELoss") {
-                        nodeColor = NodeColorProp.Loss;
-                    } else if (nodeLabel === "CrossEntropyLoss") {
-                        nodeColor = NodeColorProp.Loss;
-                    } else if (nodeLabel === "Flatten") {
-                        nodeColor = NodeColorProp.Utilities;
-                    } else if (nodeLabel === "Upsample") {
-                        nodeColor = NodeColorProp.Vision;
-                    } else if (nodeLabel === "MSELoss") {
-                        nodeColor = NodeColorProp.Loss;
-                    } else if (nodeLabel === "BasicBlock") {
-                        nodeColor = NodeColorProp.Residual;
-                    } else if (nodeLabel === "Bottleneck") {
-                        nodeColor = NodeColorProp.Residual;
-                    } else if (nodeLabel === "Concat") {
-                        nodeColor = NodeColorProp.Concat;
-                    } else if (nodeLabel === "Shortcut") {
-                        nodeColor = NodeColorProp.Sum;
-                    } else if (nodeLabel === "DownC") {
-                        nodeColor = NodeColorProp.SPP;
-                    } else if (nodeLabel === "ReOrg") {
-                        nodeColor = NodeColorProp.Utilities
-                    } else if (nodeLabel === 'IDetect') {
-                        nodeColor = NodeColorProp.Head
-                    }
-                    // console.log("sadstjklsdfhludz")
-                    if (i === 0) {
-                        x_pos = 100;
-                        y_pos = 100;
-                    } else if (isBlock) {
-                        if ((y_pos + 330) <= 639) {
-                            y_pos += 330;
-                        } else {
-                            x_pos += 200;
-                            y_pos = 100;
-                        }
-                    } else if (y_pos < 589) {
-                        y_pos += 70;
-                    } else {
-                        x_pos += 200;
-                        y_pos = 100;
-                    }
-                    // console.log("sadstjklsdfhludz")
-                    if ((String(nodeLabel) === 'BasicBlock') || (String(nodeLabel) === 'Bottleneck')) {
-                        isBlock = true;
-                    } else {
-                        isBlock = false;
-                    }
-                    // console.log("sadstjklsdfhludz")
-                    const newNode = {
-                        id: String(nodeOrder),
-                        type: "default",
-                        position: {
-                            x: x_pos,
-                            y: y_pos
-                        },
-                        sort: "0",
-                        style: {
-                            background: `${nodeColor}`,
-                            width: 135,
-                            color: "black",
-                            fontSize: "20px",
-                            fontFamily: "Helvetica",
-                            boxShadow: "5px 5px 5px 0px rgba(0,0,0,.10)",
-                            borderRadius: "10px",
-                            border: "none"
-                        },
-                        data: {
-                            // index: `${nodeOrder}`,
-                            label: `${nodeLabel}`,
-                            subparam: `${nodeParam}`
-                        }
-                    };
-
-                    const newResidualNode1 = {
-                        // 노드 내부에 residual block 이미지 넣기 - bottleneck
-                        id: String(nodeOrder),
-                        type: "default",
-                        position: {
-                            x: x_pos,
-                            y: y_pos
-                        },
-                        sort: "2",
-                        style: {
-                            background: `${nodeColor}`,
-                            fontSize: "20px",
-                            width: "135px",
-                            height: "280px",
-                            boxShadow: "7px 7px 7px 0px rgba(0,0,0,.20)",
-                            border: "0px",
-                            borderRadius: "10px",
-                            backgroundImage: `url(${BottleNeckimg})`, //사진 나오게
-                            backgroundPosition: "center",
-                            backgroundSize: "135px 280px",
-                            backgroundRepeat: "no-repeat",
-                            color: "rgba(0, 0, 0, 0)",
-                        },
-                        data: {
-                            label: `${nodeLabel}`,
-                            subparam: `${nodeParam}`
-                        }
-                    };
-                    const newResidualNode2 = {
-                        // 노드 내부에 residual block 이미지 넣기 - basic block
-                        id: String(nodeOrder),
-                        type: "default",
-                        position: {
-                            x: x_pos,
-                            y: y_pos
-                        },
-                        sort: "1",
-                        style: {
-                            background: `${nodeColor}`,
-                            fontSize: "20px",
-                            width: "135px",
-                            height: "280px",
-                            boxShadow: "7px 7px 7px 0px rgba(0,0,0,.20)",
-                            border: "0px",
-                            borderRadius: "10px",
-                            backgroundImage: `url(${BasicBlockimg})`, //사진 나오게
-                            backgroundPosition: "center",
-                            backgroundSize: "135px 280px",
-                            backgroundRepeat: "no-repeat",
-                            color: "rgba(0, 0, 0, 0)",
-                        },
-                        data: {
-                            label: `${nodeLabel}`,
-                            subparam: `${nodeParam}`
-                        }
-                    };
-
-                    //post the new node
-//                    axios.post("/api/node/", {
-//                        order: String(nodeOrder),
-//                        layer: nodeLabel,
-//                        parameters: nodeParam
-//                    }).then(function(response) {
-//                        console.log(response)
-//                    });
-                    if (String(nodeLabel) === 'Bottleneck') {
-                        initElements.push(newResidualNode1);
-                    } else if (String(nodeLabel) === 'BasicBlock') {
-                        initElements.push(newResidualNode2);
-                    } else {
-                        initElements.push(newNode);
-                    }
-
-                    // node_id += 1;
-                    // if ((i % 8 === 7) || (y_pos  > 430)) {
-                    //   x_pos += 200;
-                    //   y_pos = 100;
-                    // } else if((String(nodeLabel) === 'BasicBlock') || (String(nodeLabel) === 'Bottleneck')){
-                    //   y_pos += 330;
-                    // } else {
-                    //   y_pos += 70;
-                    // }
-                    node_id += 1;
-
+                await syncData();
+                try {
+                    const [nodeResponse, edgeResponse] = await Promise.all([
+                        axios.get("/api/node/"),
+                        axios.get("/api/edge/")
+                    ]);
+                    const resData = { nodes: nodeResponse.data, edges: edgeResponse.data };
+                    renderData(resData);
+                } catch (error) {
+                    console.error("노드 또는 엣지 가져오는 중 오류:", error);
                 }
-
-                for (var j = 0; j < dedge.data.length; j++) {
-                    let edgeId = dedge.data[j].id;
-                    let edgeNext = dedge.data[j].next;
-                    let edgePrior = dedge.data[j].prior;
-
-                    const newEdge = {
-                        id: String(edgeId + node_id),
-                        // id: "reactflow__edge-"+ `${edgePrior}` + "null" + `${edgeNext}` + "null",
-                        source: String(edgeNext),
-                        sourceHandle: null,
-                        target: String(edgePrior),
-                        targetHandle: null
-                    };
-
-                    // post the new edge
-//                    axios.post("/api/edge/", {
-//                        id: String(edgeId),
-//                        prior: String(edgePrior),
-//                        next: String(edgeNext)
-//                    }).then(function(response) {
-//                        console.log(response)
-//                    });
-
-                    initElements.push(newEdge);
-                    // console.log("sadstjklsdfhludz")
+                setCheckFirst(1);
+            } else {
+                try {
+                    const [nodeResponse, edgeResponse] = await Promise.all([
+                        axios.get("/api/node/"),
+                        axios.get("/api/edge/")
+                    ]);
+                    const resData = { nodes: nodeResponse.data, edges: edgeResponse.data };
+                    renderData(resData);
+                } catch (error) {
+                    console.error("노드 또는 엣지 가져오는 중 오류:", error);
                 }
-                // _id = _id + 1;
-
-                console.log(initElements);
-                setData([...initElements]);
-                setIsLoading(false);
-                setIsSort(false);
-                setCheckFirst(1);
-            }
-            else {
-                console.log("level1 두번째부터 실행하는 코드");
-                axios.get("/api/node/").then(function(response2){
-                    renderData(response2);
-                })
-                setCheckFirst(1);
             }
         };
-        init();
-    }, [level, group, setGroup, ungroup, setUngroup, isSort, setIsSort]);
 
+        init();
+    }, [level, group, setGroup, ungroup, setUngroup, isSort, setIsSort, checkFirst, selectedModel]);
 
     return [data, setData, isLoading];
 }
+
 export default InitialArch;
