@@ -3,6 +3,7 @@ import React, {useState, useRef, useEffect} from "react";
 import "../../styles.css";
 
 import CustomEdge from "../CustomEdge";
+import CustomEdgeYOLO from "../CustomEdgeYOLO";
 import EditModal from "../layer/PopupModal"; /* Conv2d */
 import Conv from "../layer/Conv"; /* Conv2d + BatchNorm2d + SiLU */
 import MaxPoolModal from "../layer/MaxPool";
@@ -57,7 +58,8 @@ let id = 1;
 const getId = () => `${id}`;
 let nowc= 0;
 const edgeTypes = {
-  custom: CustomEdge
+  custom: CustomEdge,
+  customYOLO: CustomEdgeYOLO
 };
 const nodeTypes = {
   custom: CustomNode

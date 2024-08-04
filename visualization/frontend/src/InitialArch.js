@@ -394,14 +394,29 @@ function InitialArch(level, group, setGroup, ungroup, setUngroup, isSort, setIsS
                             }
                         }
 
-                        const newEdge = {
-                            id: String(edge.id),
-                            source: String(priorNodeId),
-                            target: String(nextNodeId),
-                            type: 'custom',
-                            sourceHandle: sourceHandle,
-                            targetHandle: targetHandle,
-                        };
+                        let newEdge;
+
+                        if (selectedModel === 'YOLO' && edge.id === 16) {
+                            newEdge = {
+                                id: String(edge.id),
+                                source: String(priorNodeId),
+                                target: String(nextNodeId),
+                                type: 'customYOLO',
+                                sourceHandle: 'source-right',
+                                targetHandle: 'target-top',
+                            };
+                        }
+                        else {
+                            newEdge = {
+                                id: String(edge.id),
+                                source: String(priorNodeId),
+                                target: String(nextNodeId),
+                                type: 'custom',
+                                sourceHandle: sourceHandle,
+                                targetHandle: targetHandle,
+                            };
+                        }
+
                         initElements.push(newEdge);
                     } else {
                         console.error(`엣지 ${edge.id}가 존재하지 않는 노드를 참조합니다: ${edge.prior}, ${edge.next}`);
