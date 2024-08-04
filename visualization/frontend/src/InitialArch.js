@@ -89,7 +89,7 @@ function InitialArch(level, group, setGroup, ungroup, setUngroup, isSort, setIsS
                 // 노드를 order 기준으로 정렬
                 const sortedNodes = resData.nodes.sort((a, b) => a.order - b.order);
 
-                var node_id = 0;
+                var node_id = 1;
                 var x_pos = 100;
                 var y_pos = 100;
                 var isBlock = undefined;
@@ -192,7 +192,7 @@ function InitialArch(level, group, setGroup, ungroup, setUngroup, isSort, setIsS
 
                     if (selectedModel === 'VGG') {
                         // 노드 위치 설정
-                        if (node_id === 0) {
+                        if (node_id === 1) {
                             x_pos = 100;
                             y_pos = 100;
                         } else if (isBlock) {
@@ -210,106 +210,106 @@ function InitialArch(level, group, setGroup, ungroup, setUngroup, isSort, setIsS
                         }
                     } else if (selectedModel === 'YOLO') {
                         switch (node_id) {
-                            case 0:
+                            case 1:
                                 x_pos = 100;
                                 y_pos = 0;
                                 break;
-                            case 1:
+                            case 2:
                                 x_pos = 100;
                                 y_pos = 100;
                                 break;
-                            case 2:
+                            case 3:
                                 x_pos = 100;
                                 y_pos = 200;
                                 break;
-                            case 3:
-                                x_pos = 100;
-                                y_pos = 300;
-                                break;
                             case 4:
                                 x_pos = 100;
-                                y_pos = 400;
+                                y_pos = 300;
                                 break;
                             case 5:
                                 x_pos = 100;
-                                y_pos = 600;
+                                y_pos = 400;
                                 break;
                             case 6:
                                 x_pos = 100;
-                                y_pos = 700;
+                                y_pos = 600;
                                 break;
                             case 7:
                                 x_pos = 100;
-                                y_pos = 800;
+                                y_pos = 700;
                                 break;
                             case 8:
+                                x_pos = 100;
+                                y_pos = 800;
+                                break;
+                            case 9:
                                 x_pos = 100;
                                 y_pos = 900;
                                 break;
 
-                            case 9:
+                            case 10:
                                 x_pos = 400;
                                 y_pos = 900;
                                 break;
-                            case 10:
+                            case 11:
                                 x_pos = 400;
                                 y_pos = 800;
                                 break;
-                            case 11:
+                            case 12:
                                 x_pos = 400;
                                 y_pos = 700;
                                 break;
-                            case 12:
+                            case 13:
                                 x_pos = 400;
                                 y_pos = 600;
                                 break;
-                            case 13:
+                            case 14:
                                 x_pos = 400;
                                 y_pos = 500;
                                 break;
-                            case 14:
+                            case 15:
                                 x_pos = 400;
                                 y_pos = 400;
                                 break;
-                            case 15:
+                            case 16:
                                 x_pos = 400;
                                 y_pos = 300;
                                 break;
 
-                            case 16:
+                            case 17:
                                 x_pos = 700;
                                 y_pos = 500;
                                 break;
-                            case 17:
+                            case 18:
                                 x_pos = 700;
                                 y_pos = 600;
                                 break;
-                            case 18:
+                            case 19:
                                 x_pos = 700;
                                 y_pos = 700;
                                 break;
-                            case 19:
+                            case 20:
                                 x_pos = 700;
                                 y_pos = 800;
                                 break;
-                            case 20:
+                            case 21:
                                 x_pos = 700;
                                 y_pos = 900;
                                 break;
-                            case 21:
+                            case 22:
                                 x_pos = 700;
                                 y_pos = 1000;
                                 break;
 
-                            case 22:
+                            case 23:
                                 x_pos = 1000;
                                 y_pos = 300;
                                 break;
-                            case 23:
+                            case 24:
                                 x_pos = 1000;
                                 y_pos = 700;
                                 break;
-                            case 24:
+                            case 25:
                                 x_pos = 1000;
                                 y_pos = 1000;
                                 break;
@@ -320,11 +320,11 @@ function InitialArch(level, group, setGroup, ungroup, setUngroup, isSort, setIsS
 
                     isBlock = (node.layer === "BasicBlock" || node.layer === "Bottleneck");
 
+
                     const newNode = {
                         id: String(node_id),
                         type: "custom",
                         position: { x: x_pos, y: y_pos },
-                        targetPosition: "left",
                         sort: "0",
                         style: {
                             background: nodeColor,
@@ -368,11 +368,39 @@ function InitialArch(level, group, setGroup, ungroup, setUngroup, isSort, setIsS
                     const nextNodeId = nodeOrderToIdMap[edge.next];
 
                     if (priorNodeId && nextNodeId) {
+                        const priorNode = initElements.find(node => node.id === String(priorNodeId));
+                        const nextNode = initElements.find(node => node.id === String(nextNodeId));
+
+                        let sourceHandle = 'source-right';  // 기본 값
+                        let targetHandle = 'target-left';   // 기본 값
+
+                        if (priorNode && nextNode) {
+                            const priorX = priorNode.position.x;
+                            const priorY = priorNode.position.y;
+                            const nextX = nextNode.position.x;
+                            const nextY = nextNode.position.y;
+                            if (priorX < nextX) {
+                                sourceHandle = 'source-right';
+                                targetHandle = 'target-left';
+                            } else if (priorX > nextX) {
+                                sourceHandle = 'source-left';
+                                targetHandle = 'target-right';
+                            } else if (priorY < nextY) {
+                                sourceHandle = 'source-bottom';
+                                targetHandle = 'target-top';
+                            } else if (priorY > nextY) {
+                                sourceHandle = 'source-top';
+                                targetHandle = 'target-bottom';
+                            }
+                        }
+
                         const newEdge = {
                             id: String(edge.id),
                             source: String(priorNodeId),
                             target: String(nextNodeId),
                             type: 'custom',
+                            sourceHandle: sourceHandle,
+                            targetHandle: targetHandle,
                         };
                         initElements.push(newEdge);
                     } else {
