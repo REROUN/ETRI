@@ -1,8 +1,7 @@
-import React, { useState } from "react";
+import React from "react";
 import NodeColorProp from "../../NodeColor";
 
-const LayerToggle = () => {
-  const [isYolo, setIsYolo] = useState(false);
+const LayerToggle = ({ isYolo, setIsYolo }) => {  // isYolo와 setIsYolo를 props로 받음
 
   const handleToggle = () => {
     setIsYolo(!isYolo);
@@ -18,13 +17,10 @@ const LayerToggle = () => {
   return (
     <div className="LayerToggle">
       <h2 className="Layer">Layer</h2>
-      <button onClick={handleToggle} className="toggleButton">
-        {isYolo ? 'Switch to Normal' : 'Switch to Yolo'}
-      </button>
       <aside>
         {isYolo ? (
           <>
-            {/* Yolo-specific Layer contents */}
+            {/* YOLO-specific Layer contents */}
             <details className="categoryConv">
               <summary className="layerName">ADown</summary>
               <ul>
@@ -34,7 +30,7 @@ const LayerToggle = () => {
                     onDragStart={(event) => onDragStart(event, "ADown", `${NodeColorProp.Yolo_ADown}`, "'dim': 1")}
                     draggable
                   >
-                    AConv
+                    ADown
                   </div>
                 </li>
               </ul>

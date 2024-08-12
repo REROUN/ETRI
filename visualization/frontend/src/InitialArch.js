@@ -6,15 +6,18 @@ import BasicBlockimg from "./img/basicblock.png";
 import VGG16Data from './VGG16.json';
 import YoloV9Data from './Yolov9.json';
 
-function InitialArch(level, group, setGroup, ungroup, setUngroup, isSort, setIsSort) {
+function InitialArch(level, group, setGroup, ungroup, setUngroup, isSort, setIsSort, isYolo) {  // isYolo 추가
     const [data, setData] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [checkFirst, setCheckFirst] = useState(0);
-    const [selectedModel, setSelectedModel] = useState('YOLO');
-    const nodeOrderToIdMap = {};
+
+    const selectedModel = isYolo ? 'YOLO' : 'VGG';  // isYolo에 따라 모델 선택
+
     const getModelData = () => {
         return selectedModel === 'VGG' ? VGG16Data : YoloV9Data;
     };
+
+    const nodeOrderToIdMap = {};
 
     useEffect(() => {
         setIsLoading(true);
@@ -34,7 +37,7 @@ function InitialArch(level, group, setGroup, ungroup, setUngroup, isSort, setIsS
             }
 
             async function postNodes() {
-                const modelData = getModelData()
+                const modelData = getModelData();
                 for (let node of modelData.node) {
                     try {
                         await axios.post("/api/node/", {
@@ -61,7 +64,7 @@ function InitialArch(level, group, setGroup, ungroup, setUngroup, isSort, setIsS
             }
 
             async function postEdges() {
-                const modelData = getModelData()
+                const modelData = getModelData();
                 for (let edge of modelData.edge) {
                     try {
                         await axios.post("/api/edge/", {
@@ -379,18 +382,24 @@ function InitialArch(level, group, setGroup, ungroup, setUngroup, isSort, setIsS
                             const priorY = priorNode.position.y;
                             const nextX = nextNode.position.x;
                             const nextY = nextNode.position.y;
-                            if (priorX < nextX) {
-                                sourceHandle = 'source-right';
-                                targetHandle = 'target-left';
-                            } else if (priorX > nextX) {
-                                sourceHandle = 'source-left';
-                                targetHandle = 'target-right';
-                            } else if (priorY < nextY) {
+                            if (selectedModel === 'VGG') {
                                 sourceHandle = 'source-bottom';
                                 targetHandle = 'target-top';
-                            } else if (priorY > nextY) {
-                                sourceHandle = 'source-top';
-                                targetHandle = 'target-bottom';
+                            }
+                            else {
+                                if (priorX < nextX) {
+                                    sourceHandle = 'source-right';
+                                    targetHandle = 'target-left';
+                                } else if (priorX > nextX) {
+                                    sourceHandle = 'source-left';
+                                    targetHandle = 'target-right';
+                                } else if (priorY < nextY) {
+                                    sourceHandle = 'source-bottom';
+                                    targetHandle = 'target-top';
+                                } else if (priorY > nextY) {
+                                    sourceHandle = 'source-top';
+                                    targetHandle = 'target-bottom';
+                                }
                             }
                         }
 
