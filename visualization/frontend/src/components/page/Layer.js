@@ -76,7 +76,7 @@ let clickedNodeIdList = [];
 
 function LayerList() {
   const [modelName, setModelName] = useState("Yolov9"); // 모델 이름 상태 추가
-  const [isYolo, setIsYolo] = useState(false); // YOLO 모드를 위한 상태 추가
+  const [isYolo, setIsYolo] = useState(modelName.toLowerCase().includes("yolo")); // YOLO 모드를 위한 상태 추가
   const [isInitialLoading, setIsInitialLoading] = useState(true); // 로딩 상태 추가, 이름 변경
   const reactFlowWrapper = useRef(null);
   const [reactFlowInstance, setReactFlowInstance] = useState(null);
@@ -88,11 +88,6 @@ function LayerList() {
   const [level, setLevel] = useState(1);
   const [ungroup, setUngroup] = useState(false);
   const [isSort, setIsSort] = useState(false);
-
-  // 모델 이름을 보고 isYolo 설정
-  useEffect(() => {
-    setIsYolo(modelName.toLowerCase().includes("yolo"));
-  }, [modelName]);
 
   const [elements, setElements, isLoading] = InitialArch(level, group, setGroup, ungroup, setUngroup, isSort, setIsSort, isYolo, modelName); // isYolo, modelName 전달
   const [rapid, setRapid] = useState([]);
