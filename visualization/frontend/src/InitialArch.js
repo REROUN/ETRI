@@ -3,18 +3,24 @@ import axios from 'axios';
 import NodeColorProp from "./NodeColor";
 import BottleNeckimg from "./img/bottleneck.png";
 import BasicBlockimg from "./img/basicblock.png";
-import VGG16Data from './VGG16.json';
-import YoloV9Data from './Yolov9.json';
 
-function InitialArch(level, group, setGroup, ungroup, setUngroup, isSort, setIsSort) {
+function InitialArch(level, group, setGroup, ungroup, setUngroup, isSort, setIsSort, isYolo, modelName) {  // isYolo, modelName 추가
     const [data, setData] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [checkFirst, setCheckFirst] = useState(0);
-    const [selectedModel, setSelectedModel] = useState('YOLO');
-    const nodeOrderToIdMap = {};
-    const getModelData = () => {
-        return selectedModel === 'VGG' ? VGG16Data : YoloV9Data;
+      // 모델 이름에 따라 JSON 데이터를 동적으로 불러오는 함수
+    const getModelData = async (modelName) => {
+      try {
+        const modelData = require(`./${modelName}.json`);
+        return modelData;  // JSON 파일의 default export를 반환
+      }
+      catch (error) {
+        console.error("모델 데이터를 불러오는 중 오류 발생:", error);
+        return null;
+      }
     };
+
+    const nodeOrderToIdMap = {};
 
     useEffect(() => {
         setIsLoading(true);
@@ -34,7 +40,7 @@ function InitialArch(level, group, setGroup, ungroup, setUngroup, isSort, setIsS
             }
 
             async function postNodes() {
-                const modelData = getModelData()
+                const modelData = await getModelData(modelName);
                 for (let node of modelData.node) {
                     try {
                         await axios.post("/api/node/", {
@@ -61,7 +67,7 @@ function InitialArch(level, group, setGroup, ungroup, setUngroup, isSort, setIsS
             }
 
             async function postEdges() {
-                const modelData = getModelData()
+                const modelData = await getModelData(modelName);
                 for (let edge of modelData.edge) {
                     try {
                         await axios.post("/api/edge/", {
@@ -98,7 +104,7 @@ function InitialArch(level, group, setGroup, ungroup, setUngroup, isSort, setIsS
                     nodeOrderToIdMap[node.order] = node_id;
 
                     let nodeColor;
-                    if (selectedModel === 'VGG') {
+                    if (!isYolo) {
                         switch (node.layer) {
                             case "Conv2d":
                             case "Conv":
@@ -162,7 +168,7 @@ function InitialArch(level, group, setGroup, ungroup, setUngroup, isSort, setIsS
                             default:
                                 nodeColor = NodeColorProp.Default;
                         }
-                    } else if (selectedModel === 'YOLO') {
+                    } else if (isYolo) {
                         switch (node.layer) {
                             case "Conv":
                                 nodeColor = NodeColorProp.Yolo_Conv;
@@ -190,7 +196,7 @@ function InitialArch(level, group, setGroup, ungroup, setUngroup, isSort, setIsS
                         }
                     }
 
-                    if (selectedModel === 'VGG') {
+                    if (!isYolo) {
                         // 노드 위치 설정
                         if (node_id === 1) {
                             x_pos = 100;
@@ -208,7 +214,7 @@ function InitialArch(level, group, setGroup, ungroup, setUngroup, isSort, setIsS
                             x_pos += 200;
                             y_pos = 100;
                         }
-                    } else if (selectedModel === 'YOLO') {
+                    } else if (isYolo) {
                         switch (node_id) {
                             case 1:
                                 x_pos = 100;
@@ -342,6 +348,7 @@ function InitialArch(level, group, setGroup, ungroup, setUngroup, isSort, setIsS
 
                     // BasicBlock 및 Bottleneck에 대한 스타일 추가
                     if (node.layer === "Bottleneck") {
+                        newNode.type = "default";
                         newNode.style.backgroundImage = `url(${BottleNeckimg})`;
                         newNode.style.height = "280px";
                         newNode.style.backgroundPosition = "center";
@@ -349,6 +356,7 @@ function InitialArch(level, group, setGroup, ungroup, setUngroup, isSort, setIsS
                         newNode.style.backgroundRepeat = "no-repeat";
                         newNode.style.color = "rgba(0, 0, 0, 0)";
                     } else if (node.layer === "BasicBlock") {
+                        newNode.type = "default";
                         newNode.style.backgroundImage = `url(${BasicBlockimg})`;
                         newNode.style.height = "280px";
                         newNode.style.backgroundPosition = "center";
@@ -379,24 +387,30 @@ function InitialArch(level, group, setGroup, ungroup, setUngroup, isSort, setIsS
                             const priorY = priorNode.position.y;
                             const nextX = nextNode.position.x;
                             const nextY = nextNode.position.y;
-                            if (priorX < nextX) {
-                                sourceHandle = 'source-right';
-                                targetHandle = 'target-left';
-                            } else if (priorX > nextX) {
-                                sourceHandle = 'source-left';
-                                targetHandle = 'target-right';
-                            } else if (priorY < nextY) {
+                            if (!isYolo) {
                                 sourceHandle = 'source-bottom';
                                 targetHandle = 'target-top';
-                            } else if (priorY > nextY) {
-                                sourceHandle = 'source-top';
-                                targetHandle = 'target-bottom';
+                            }
+                            else {
+                                if (priorX < nextX) {
+                                    sourceHandle = 'source-right';
+                                    targetHandle = 'target-left';
+                                } else if (priorX > nextX) {
+                                    sourceHandle = 'source-left';
+                                    targetHandle = 'target-right';
+                                } else if (priorY < nextY) {
+                                    sourceHandle = 'source-bottom';
+                                    targetHandle = 'target-top';
+                                } else if (priorY > nextY) {
+                                    sourceHandle = 'source-top';
+                                    targetHandle = 'target-bottom';
+                                }
                             }
                         }
 
                         let newEdge;
 
-                        if (selectedModel === 'YOLO' && edge.id === 16) {
+                        if (isYolo && edge.id === 16) {
                             newEdge = {
                                 id: String(edge.id),
                                 source: String(priorNodeId),
@@ -455,7 +469,7 @@ function InitialArch(level, group, setGroup, ungroup, setUngroup, isSort, setIsS
         };
 
         init();
-    }, [level, group, setGroup, ungroup, setUngroup, isSort, setIsSort, checkFirst, selectedModel]);
+    }, [level, group, setGroup, ungroup, setUngroup, isSort, setIsSort, checkFirst, modelName, isYolo]);
 
     return [data, setData, isLoading];
 }

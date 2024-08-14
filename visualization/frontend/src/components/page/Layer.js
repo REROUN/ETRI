@@ -53,7 +53,6 @@ import BasicBlockimg from "../../img/basicblock.png";
 import BottleNeckimg from "../../img/bottleneck.png";
 import CustomNode from "../CustomNode";
 
-
 let id = 1;
 const getId = () => `${id}`;
 let nowc= 0;
@@ -74,10 +73,13 @@ var sortHeight = 0;
 let sortList = [];
 let clickedNodeList = [];
 let clickedNodeIdList = [];
+
 function LayerList() {
+  const [modelName, setModelName] = useState("Yolov9"); // 모델 이름 상태 추가
+  const [isYolo, setIsYolo] = useState(false); // YOLO 모드를 위한 상태 추가
+  const [isInitialLoading, setIsInitialLoading] = useState(true); // 로딩 상태 추가, 이름 변경
   const reactFlowWrapper = useRef(null);
   const [reactFlowInstance, setReactFlowInstance] = useState(null);
-  //const [elements, setElements] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [state, setState] = useState("");
   const [idState, setIdState] = useState("");
@@ -86,11 +88,15 @@ function LayerList() {
   const [level, setLevel] = useState(1);
   const [ungroup, setUngroup] = useState(false);
   const [isSort, setIsSort] = useState(false);
-  const [elements, setElements, isLoading] = InitialArch(level, group, setGroup, ungroup, setUngroup, isSort, setIsSort);
+
+  // 모델 이름을 보고 isYolo 설정
+  useEffect(() => {
+    setIsYolo(modelName.toLowerCase().includes("yolo"));
+  }, [modelName]);
+
+  const [elements, setElements, isLoading] = InitialArch(level, group, setGroup, ungroup, setUngroup, isSort, setIsSort, isYolo, modelName); // isYolo, modelName 전달
   const [rapid, setRapid] = useState([]);
   const [noMatch, setNoMatch] = useState([]);
-
-  var running_id = 0;
 
   useEffect(()=>{
     const get_params = async () => {
@@ -147,9 +153,6 @@ function LayerList() {
 
 
   },[rapid, noMatch])
-
-
-
 
 
 const onSortNodes = (sortList) => {
@@ -648,11 +651,9 @@ const tabOnClick = (path) => {
       <div className="FullPage">
         <div className="Sidebar">
           <Tab tabOnClick={tabOnClick}/>
-          {(tabToggle === 1)?<LayerToggle />:<NetworkInformation />}
-          {/*<LayerToggle/>*/}
+          {(tabToggle === 1)?<LayerToggle isYolo={isYolo} setIsYolo={setIsYolo} />:<NetworkInformation />} {/* isYolo와 setIsYolo 전달 */}
           <div className="LayerInfo">
             <h3>Layer Information</h3>
-            {/*<div className="Modal">*/}
               <C />
             </div>
          </div>
@@ -680,7 +681,6 @@ const tabOnClick = (path) => {
             connectionMode="loose"
             >
             <Controls showZoom="" showInteractive="" showFitView="">
-              {/*정렬된 노드 get 요청*/}
               <ControlButton onClick={sortActive} title="action">
                 <img src={arange_icon}/>
               </ControlButton>
