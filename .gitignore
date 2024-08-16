@@ -1,3 +1,14 @@
+autonn/
+base_model_select/
+deploy_codegen/
+docs/
+labelling/
+project_manager/
+visualization/viz2code/settings.py/
+
+
+
+
 # Byte-compiled / optimized / DLL files
 # source: https://github.com/martinohanlon/flightlight/issues/1
 __pycache__/
