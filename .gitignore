@@ -4,7 +4,7 @@ deploy_codegen/
 docs/
 labelling/
 project_manager/
-visualization/viz2code/settings.py/
+./visualization/viz2code/settings.py/
 
 
 
