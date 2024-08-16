@@ -51,6 +51,11 @@ import InitialArch from "../../InitialArch";
 import arange_icon from "../../img/swap.png";
 import BasicBlockimg from "../../img/basicblock.png";
 import BottleNeckimg from "../../img/bottleneck.png";
+import SPPELAN from "../../img/SPPELAN.png";
+import RepNCSP from "../../img/RepNCSP.png";
+import RepNCSPELAN4 from "../../img/RepNCSPELAN4.png";
+import ADown from "../../img/ADown.png";
+import yolo_Conv from "../../img/Conv.png";
 import CustomNode from "../CustomNode";
 
 let id = 1;
@@ -76,7 +81,7 @@ let clickedNodeIdList = [];
 
 function LayerList() {
   const [modelName, setModelName] = useState("Yolov9"); // 모델 이름 상태 추가
-  const [isYolo, setIsYolo] = useState(false); // YOLO 모드를 위한 상태 추가
+  const [isYolo, setIsYolo] = useState(true); // YOLO 모드를 위한 상태 추가
   const [isInitialLoading, setIsInitialLoading] = useState(true); // 로딩 상태 추가, 이름 변경
   const reactFlowWrapper = useRef(null);
   const [reactFlowInstance, setReactFlowInstance] = useState(null);
@@ -89,10 +94,13 @@ function LayerList() {
   const [ungroup, setUngroup] = useState(false);
   const [isSort, setIsSort] = useState(false);
 
+  const [selectedLayer, setSelectedLayer] = useState(null);
+  const [hoverImage, setHoverImage] = useState(null);
+
   // 모델 이름을 보고 isYolo 설정
   useEffect(() => {
     setIsYolo(modelName.toLowerCase().includes("yolo"));
-  }, [modelName]);
+  }, []);
 
   const [elements, setElements, isLoading] = InitialArch(level, group, setGroup, ungroup, setUngroup, isSort, setIsSort, isYolo, modelName); // isYolo, modelName 전달
   const [rapid, setRapid] = useState([]);
@@ -437,6 +445,29 @@ const notRunningState = setInterval(() => {
         await setIdState(node.id);
         console.log(node.position);
 
+            // 클릭된 레이어에 따른 이미지 설정
+        switch (node.data.label) {
+            case "SPPELAN":
+                setHoverImage(SPPELAN);
+                break;
+            case "RepNCSPELAN4":
+                setHoverImage(RepNCSPELAN4);
+                break;
+            case "ADown":
+                setHoverImage(ADown);
+                break;
+            case "RepNCSP":
+                setHoverImage(RepNCSP);
+                break;
+            case "Conv":
+                setHoverImage(yolo_Conv);
+                break;
+
+            default:
+                setHoverImage(null);
+        }
+
+
         const isCtrlKey = event.ctrlKey || event.metaKey || event.shiftKey;
 
       if (isCtrlKey) {
@@ -685,14 +716,30 @@ const tabOnClick = (path) => {
                 <img src={arange_icon}/>
               </ControlButton>
             </Controls>
-          <div className="reactBtn" style={{position:'absolute' ,zIndex:100}}>
-
-            <GenerateButton  elements={elements}  />
+            <div className="reactBtn" style={{position:'absolute' ,zIndex:100}}>
+                <GenerateButton  elements={elements}  />
             </div>
+
+            {hoverImage && (
+                <div className="hoverImage" style={{
+                    position: 'absolute',
+                    top: '50px', // 원하는 위치에 맞게 조정
+                    left: '200px', // 원하는 위치에 맞게 조정
+                    zIndex: 1000,
+                    pointerEvents: 'auto' // 이미지가 클릭 가능하게
+                }}>
+                    <img
+                        src={hoverImage}
+                        alt="Layer Detail"
+                        style={{ maxWidth: '300px', maxHeight: '300px', cursor: 'pointer' }}
+                        onClick={() => setHoverImage(null)}
+                    />
+                </div>
+            )}
 
           </ReactFlow>
         </div>
-        </ReactFlowProvider>
+      </ReactFlowProvider>
 
     </div>
       </div>
