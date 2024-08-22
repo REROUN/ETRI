@@ -678,22 +678,25 @@ const tabOnClick = (path) => {
     return <div>로딩중...</div>;
   }
 
-  return (
-      <div className="FullPage">
-        <div className="Sidebar">
-          <Tab tabOnClick={tabOnClick}/>
-          {(tabToggle === 1)?<LayerToggle isYolo={isYolo} setIsYolo={setIsYolo} />:<NetworkInformation />} {/* isYolo와 setIsYolo 전달 */}
-          <div className="LayerInfo">
-            <h3>Layer Information</h3>
-              <C />
-            </div>
-         </div>
+return (
+  <div className="FullPage">
+    <div className="Sidebar">
+      <Tab tabOnClick={tabOnClick} />
+      {tabToggle === 1 ? (
+        <LayerToggle isYolo={isYolo} setIsYolo={setIsYolo} />
+      ) : (
+        <NetworkInformation />
+      )} {/* isYolo와 setIsYolo 전달 */}
+      <div className="LayerInfo">
+        <h3>Layer Information</h3>
+        <C />
+      </div>
+    </div>
 
-
-    <div className="dndflow" >
+    <div className="dndflow">
       <ReactFlowProvider>
         <div className="reactflow-wrapper" ref={reactFlowWrapper}>
-           <ReactFlow
+          <ReactFlow
             onConnectStart={onConnectStart}
             onConnect={onConnect}
             elements={elements}
@@ -710,41 +713,64 @@ const tabOnClick = (path) => {
             onElementClick={onNodeClick}
             onPaneClick={onPaneClick}
             connectionMode="loose"
-            >
+          >
             <Controls showZoom="" showInteractive="" showFitView="">
               <ControlButton onClick={sortActive} title="action">
-                <img src={arange_icon}/>
+                <img src={arange_icon} />
               </ControlButton>
             </Controls>
-            <div className="reactBtn" style={{position:'absolute' ,zIndex:100}}>
-                <GenerateButton  elements={elements}  />
+            <div
+              className="reactBtn"
+              style={{ position: "absolute", zIndex: 100 }}
+            >
+              <GenerateButton elements={elements} />
             </div>
 
             {hoverImage && (
-                <div className="hoverImage" style={{
-                    position: 'absolute',
-                    top: '50px', // 원하는 위치에 맞게 조정
-                    left: '200px', // 원하는 위치에 맞게 조정
-                    zIndex: 1000,
-                    pointerEvents: 'auto' // 이미지가 클릭 가능하게
-                }}>
-                    <img
-                        src={hoverImage}
-                        alt="Layer Detail"
-                        style={{ maxWidth: '300px', maxHeight: '300px', cursor: 'pointer' }}
-                        onClick={() => setHoverImage(null)}
-                    />
+              <div
+                className="hoverImage"
+                style={{
+                  position: "fixed",
+                  top: 0,
+                  left: 0,
+                  width: "100vw",
+                  height: "100vh",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: "rgba(0, 0, 0, 0.5)", // 배경 어둡게
+                  zIndex: 1000,
+                }}
+                onClick={() => setHoverImage(null)}
+              >
+                <div
+                  className="hoverImage"
+                  style={{
+                    position: "relative",
+                    zIndex: 1001,
+                    pointerEvents: "auto", // 이미지가 클릭 가능하게
+                  }}
+                >
+                  <img
+                    src={hoverImage}
+                    alt="Layer Detail"
+                    style={{
+                      maxWidth: "500px",
+                      maxHeight: "500px",
+                      cursor: "pointer",
+                    }}
+                    onClick={() => setHoverImage(null)}
+                  />
                 </div>
+              </div>
             )}
-
           </ReactFlow>
         </div>
       </ReactFlowProvider>
-
     </div>
-      </div>
-  );
-}
+  </div>
+)
+};
 
 export default function Layer() {
   return <LayerList />;
