@@ -686,7 +686,7 @@ return (
         <LayerToggle isYolo={isYolo} setIsYolo={setIsYolo} />
       ) : (
         <NetworkInformation />
-      )} {/* isYolo와 setIsYolo 전달 */}
+      )}
       <div className="LayerInfo">
         <h3>Layer Information</h3>
         <C />
@@ -719,6 +719,43 @@ return (
                 <img src={arange_icon} />
               </ControlButton>
             </Controls>
+
+            {/* 직사각형 그리기 - 노드 1 기준 */}
+            <div style={{
+              position: 'absolute',
+              left: '80px',
+              top: '-10px',
+              width: '225px',
+              height: '960px',
+              backgroundColor: 'transparent',
+              border: '3px dashed #A7D873',
+              borderRadius: "10px",
+            }} />
+
+            {/* 직사각형 그리기 - 노드 2 기준 */}
+            <div style={{
+              position: 'absolute',
+              left: '380px',
+              top: '250px',
+              width: '525px',
+              height: '700px',
+              backgroundColor: 'transparent',
+              border: '3px dashed #006ABE',
+              borderRadius: "10px",
+            }} />
+
+            {/* 직사각형 그리기 - 노드 3 기준 */}
+            <div style={{
+              position: 'absolute',
+              left: '980px',
+              top: '250px',
+              width: '225px',
+              height: '700px',
+              backgroundColor: 'transparent',
+              border: '3px dashed #C00000',
+              borderRadius: "10px",
+            }} />
+
             <div
               className="reactBtn"
               style={{ position: "absolute", zIndex: 100 }}
@@ -738,7 +775,7 @@ return (
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  backgroundColor: "rgba(0, 0, 0, 0.5)", // 배경 어둡게
+                  backgroundColor: "rgba(0, 0, 0, 0.5)",
                   zIndex: 1000,
                 }}
                 onClick={() => setHoverImage(null)}
@@ -748,7 +785,7 @@ return (
                   style={{
                     position: "relative",
                     zIndex: 1001,
-                    pointerEvents: "auto", // 이미지가 클릭 가능하게
+                    pointerEvents: "auto",
                   }}
                 >
                   <img
